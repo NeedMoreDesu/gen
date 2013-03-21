@@ -54,7 +54,8 @@ Some supervisor and linker examples
 ;; => [:started #<Thread Thread[Thread-70,5,main]>]
 
 supervisor
-;; => #<GenProcess Supervisor status: alive-linked, processes: [#<GenProcess Linker status: alive-linked, count: 2>], count 1>
+;; => #<GenProcess Supervisor status: alive-linked, processes: [#<GenProcess Linker status:
+;; alive-linked, count: 2>], count 1>
 ;; and in repl:
 ;; == STARTED supervisor #<GenProcess Supervisor status: alive-linked, processes: [], count 0> ==
 ;; |= STARTED #<GenProcess Linker status: alive-linked> =|
@@ -63,7 +64,8 @@ supervisor
 (gen.supervisor/process-add supervisor loop1)
 ;; => true
 ;; whoops. Something is going on in repl:
-;; == In supervisor #<GenProcess Supervisor status: alive-linked, processes: [#<GenProcess Linker status: alive-linked, count: 3>], count 1> ==
+;; == In supervisor #<GenProcess Supervisor status: alive-linked, processes: [#<GenProcess Linker
+;; status: alive-linked, count: 3>], count 1> ==
 ;; |= STARTED #<GenProcess Loop status: alive-linked, state: 9064> =|
 ;; I've initialized with nil
 ;; Im running with nil
@@ -99,7 +101,9 @@ supervisor
 ;;     clojure.lang.RestFn.invoke (RestFn.java:397)
 ;;     clojure.lang.AFn.run (AFn.java:24)
 ;;     java.lang.Thread.run (Thread.java:722)
-;; == In supervisor #<GenProcess Supervisor status: alive-linked, processes: [#<GenProcess Linker status: alive-linked, count: 2> #<GenProcess Loop status: dead, state: nil, [:fail #<NullPointerException java.lang.NullPointerException>]>], count 2> ==
+;; == In supervisor #<GenProcess Supervisor status: alive-linked, processes: [#<GenProcess Linker
+;; status: alive-linked, count: 2> #<GenProcess Loop status: dead, state: nil, [:fail
+;; #<NullPointerException java.lang.NullPointerException>]>], count 2> ==
 ;; |= FAIL: #<GenProcess Loop status: dead, state: nil, [:fail #<NullPointerException java.lang.NullPointerException>]> =|
 ;; |- with thread #<Thread Thread[Thread-72,5,]> -|
 ;; |- max number of restarts 0 reached in 4 milliseconds -|
@@ -108,7 +112,8 @@ supervisor
  (gen.supervisor/rule-create :args 1234)) ; Ah, right. Forgot init arg.
 ;; => true
 ;; in repl:
-;; == In supervisor #<GenProcess Supervisor status: alive-linked, processes: [#<GenProcess Linker status: alive-linked, count: 3>], count 1> ==
+;; == In supervisor #<GenProcess Supervisor status: alive-linked, processes: [#<GenProcess Linker
+;; status: alive-linked, count: 3>], count 1> ==
 ;; |= STARTED #<GenProcess Loop status: alive-linked, state: nil> =|
 ;; I've initialized with 1234
 ;; Im running with 1234
@@ -118,7 +123,9 @@ supervisor
   :some-nice-looking-reason-to-kill-main-supervisor)
 ;; => [:terminated :ok]
 ;; in repl:
-;; == supervisor #<GenProcess Supervisor status: alive-linked, processes: [#<GenProcess Linker status: alive-linked, count: 3> #<GenProcess Loop status: alive-linked, state: 1708>], count 2> ==
+;; == supervisor #<GenProcess Supervisor status: alive-linked, processes: [#<GenProcess Linker
+;; status: alive-linked, count: 3> #<GenProcess Loop status: alive-linked, state: 1708>], count 2>
+;; ==
 ;; -- with thread #<Thread Thread[Thread-70,5,main]> --
 ;; -- CRASHED --
 ;; |- terminated #<GenProcess Linker status: dead, count: 2, [:result [:terminate :supervisor-terminate]]> -|
@@ -129,7 +136,9 @@ supervisor
 @(gen.process/start supervisor nil)
 ;; => [:started #<Thread Thread[Thread-78,5,main]>]
 ;; in repl:
-;; == STARTED supervisor #<GenProcess Supervisor status: alive-linked, processes: [#<GenProcess Linker status: dead, count: 3, [:result [:terminate :supervisor-terminate]]> #<GenProcess Loop status: dead, state: 1709, [:result [:terminated :supervisor-terminate]]>], count 2> ==
+;; == STARTED supervisor #<GenProcess Supervisor status: alive-linked, processes: [#<GenProcess
+;; Linker status: dead, count: 3, [:result [:terminate :supervisor-terminate]]> #<GenProcess Loop
+;; status: dead, state: 1709, [:result [:terminated :supervisor-terminate]]>], count 2> ==
 ;; |= STARTED #<GenProcess Linker status: alive-linked, count: 4> =|
 
 supervisor
@@ -138,7 +147,8 @@ supervisor
 @(gen.process/stop linker :just-die)
 ;; => [:terminated :ok]
 ;; in repl:
-;; == In supervisor #<GenProcess Supervisor status: alive-linked, processes: [#<GenProcess Linker status: dead, count: 1, [:result [:terminate :just-die]]>], count 1> ==
+;; == In supervisor #<GenProcess Supervisor status: alive-linked, processes: [#<GenProcess Linker
+;; status: dead, count: 1, [:result [:terminate :just-die]]>], count 1> ==
 ;; |= restart: #<GenProcess Linker status: dead, count: 1, [:result [:terminate :just-die]]> =|
 ;; |- with thread #<Thread Thread[Thread-79,5,]> -|
 ;; |- process restarts infinitely -|
@@ -154,12 +164,15 @@ supervisor
   :important? loop1
   :args 1234))
 @(gen.process/stop loop1 :oops)
-;; == In supervisor #<GenProcess Supervisor status: alive-linked, processes: [#<GenProcess Linker status: alive-linked, count: 3> #<GenProcess Loop status: dead, state: 1424, [:result [:terminated :oops]]>], count 2> ==
+;; == In supervisor #<GenProcess Supervisor status: alive-linked, processes: [#<GenProcess Linker
+;; status: alive-linked, count: 3> #<GenProcess Loop status: dead, state: 1424, [:result
+;; [:terminated :oops]]>], count 2> ==
 ;; == IMPORTANT PROCESS DEATH ==
 ;; |= FAIL: #<GenProcess Loop status: dead, state: 1424, [:result [:terminated :oops]]> =|
 ;; |- with thread #<Thread Thread[Thread-88,5,]> -|
 ;; |- max number of restarts 0 reached in 6 milliseconds -|
-;; == supervisor #<GenProcess Supervisor status: alive-linked, processes: [#<GenProcess Linker status: alive-linked, count: 3>], count 1> ==
+;; == supervisor #<GenProcess Supervisor status: alive-linked, processes: [#<GenProcess Linker
+;; status: alive-linked, count: 3>], count 1> ==
 ;; -- with thread #<Thread Thread[Thread-78,5,main]> --
 ;; -- CRASHED --
 ;; |- terminated #<GenProcess Linker status: dead, count: 1, [:result [:terminate :supervisor-terminate]]> -|
