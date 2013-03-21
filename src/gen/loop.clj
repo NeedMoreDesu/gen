@@ -15,7 +15,7 @@
  (assert (fn? terminate))
  (assert (fn? state-getter))
  (let [state# (atom nil)
-       start-fn (fn [process args stop-promise]
+       start-fn (bound-fn [process args stop-promise]
                  (bound-fn []
                   (loop [[command state] (init process args)]
                    (assert (#{:run :stop :self-term} command))
@@ -25,7 +25,7 @@
                     (= command :stop) [:stopped state]
                     (= command :self-term) (terminate :self-term state process)
                     (= command :run) (recur (body state process))))))
-       state-getter-fn (fn [] (state-getter @state#))
+       state-getter-fn (bound-fn [] (state-getter @state#))
        self-process (gen.process/create
                      :type type
                      :start start-fn

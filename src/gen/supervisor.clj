@@ -39,7 +39,7 @@
           arg
           (map? arg)
           (some #(= (:important? arg) %) [true false])
-          (some #(= (:important? arg) %) [true false])
+          (some #(= (:restarts-everyone? arg) %) [true false])
           (or
            (not (:max-restarts arg))
            (integer? (:max-restarts arg)))
@@ -177,6 +177,7 @@
  (let [action-handlers
        {:add
         (bound-fn [{:keys [process rule]} processes rules timers self]
+         (if rule (assert (rule? rule)))
          (if (gen.process/alive? process)
           (if *print-start-reports*
            (do

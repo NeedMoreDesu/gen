@@ -20,10 +20,10 @@
  (apply
   gen.loop/create
   :type type
-  :init (fn [process args]
+  :init (bound-fn [process args]
          (let [[command state] (init process args)]
           [command {:state state}]))
-  :body (fn [{state :state last-message :last-message} process]
+  :body (bound-fn [{state :state last-message :last-message} process]
          (if (gen.process/queue-empty? process)
           (do
            (Thread/sleep gen.internals/*sleep-interval*)
