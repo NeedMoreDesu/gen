@@ -24,12 +24,11 @@
          (let [[command state] (init process args)]
           [command {:state state}]))
   :body (bound-fn [{state :state last-message :last-message} process]
-         (if (gen.process/queue-empty? process)
-          (do
-           (Thread/sleep gen.internals/*sleep-interval*)
-           [:run {:state state :last-message last-message}])
+         (or
           (gen.process/receive [message process]
            (let [[command state] (handler message state process)]
-            [command {:state state :last-message message}]))))
+            [command {:state state :last-message message}]))
+          (Thread/sleep gen.internals/*sleep-interval*)
+          [:run {:state state :last-message last-message}]))
   (apply concat (dissoc args :init :handler))))
 

@@ -38,11 +38,11 @@
       :as args}]
   (assert (storage? linker))
   (let [process (gen.loop/create
-                 :init (fn [process args] [:run linker])
-                 :body (fn [linker process]
+                 :init (bound-fn [process args] [:run linker])
+                 :body (bound-fn [linker process]
                         (check-processes linker process)
                         [:run linker])
-                 :terminate (fn [reason linker process]
+                 :terminate (bound-fn [reason linker process]
                              (storage-remove linker (gen.process/get-thread process))
                              [:terminate reason])
                  :timeout nil

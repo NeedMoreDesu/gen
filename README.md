@@ -194,6 +194,75 @@ linker
 ;; die, if one of it's processes is terminated.
 ```
 
+Server example
+
+```clojure
+;; There should be only one linker. It works with
+;; gen.linker-storage/*linker*, but you can manually pass linker
+;; variable to each process you create. Or bind *linker* with binding.
+
+(def linker (gen.linker/create))
+(def server1 (gen.server/create
+              :init (fn [process args]
+                     (gen.server/message process args [:inc 0])
+                     [:run nil])
+              ;; gen.server/message sends [message process-from] messages
+              ;; lets divide it to [[type message] from]
+              :handler (fn [[[type message] from] state process]
+                        (case type
+                         :inc (gen.server/message
+                               process
+                               from
+                               [:inc (inc message)]))
+                        [:run state])))
+(def server2 (gen.server/create
+              :handler (fn [[[type message] from] state process]
+                        (case type
+                         :inc (gen.server/message
+                               process
+                               from
+                               [:inc (inc message)]))
+                        (if (< 10000 message)
+                         [:stop state]
+                         [:run state]))))
+(def supervisor (sup/create
+                 :processes #{linker server1 server2}
+                 :rules {linker (sup/rule-create
+                                 :important? true
+                                 :max-restarts nil)
+                         server1 (sup/rule-create
+                                  :important? true
+                                  ;; passing other server as init, so
+                                  ;; they can start communicating
+                                  :args server2)
+                         server2 (sup/rule-create
+                                  :important? true)}))
+@(gen.process/start supervisor nil)
+;; => [:started #<Thread Thread[Thread-127,5,main]>]
+;; in repl:
+;; == STARTED supervisor #<GenProcess Supervisor status: alive-linked, processes: [], count 0> ==
+;; |= STARTED #<GenProcess Linker status: alive-linked, count: 4> =|
+;; |= STARTED #<GenProcess Server status: alive-linked, state: nil, last-message: nil> =|
+;; |= STARTED #<GenProcess Server status: alive-linked, state: nil, last-message: [:inc 503]> =|
+
+;; after a while
+;; == In supervisor #<GenProcess Supervisor status: alive-linked, processes: [#<GenProcess Linker status: alive-linked, count: 4> #<GenProcess Server status: dead, messages: 1, state: nil, last-message: [:inc 10002], [:result [:stopped {:state nil, :last-message [[:inc 10002] #<GenProcess Server status: alive-linked, state: nil, last-message: [:inc 10003]>]}]]> #<GenProcess Server status: alive-linked, state: nil, last-message: [:inc 10003]>], count 3> ==
+;; == IMPORTANT PROCESS DEATH ==
+;; |= FAIL: #<GenProcess Server status: dead, messages: 1, state: nil, last-message: [:inc 10002], [:result [:stopped {:state nil, :last-message [[:inc 10002] #<GenProcess Server status: alive-linked, state: nil, last-message: [:inc 10003]>]}]]> =|
+;; |- with thread #<Thread Thread[Thread-129,5,]> -|
+;; |- max number of restarts 0 reached in 4 milliseconds -|
+;; == supervisor #<GenProcess Supervisor status: alive-linked, processes: [#<GenProcess Linker status: alive-linked, count: 4> #<GenProcess Server status: alive-linked, state: nil, last-message: [:inc 10003]>], count 2> ==
+;; -- with thread #<Thread Thread[Thread-127,5,main]> --
+;; -- CRASHED --
+;; |- terminated #<GenProcess Linker status: dead, count: 2, [:result [:terminate :supervisor-terminate]]> -|
+;; |- with thread #<Thread Thread[Thread-128,5,]> -|
+;; |- terminated #<GenProcess Server status: dead, state: nil, last-message: [:inc 10003], [:result :killed]> -|
+;; |- with thread #<Thread Thread[Thread-130,5,]> -|
+
+;; So, it reached 10000 and server2 stopped. All the system collapsed,
+;; because important process is dead and cannot be restarted.
+```
+
 ## License
 
 Copyright © 2013 NeedMoreDesu desu@horishniy.org.ua

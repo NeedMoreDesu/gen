@@ -215,30 +215,18 @@
   @(start-link process args)))
 
 (defn message [process message]
- (assert (= (type @((.data process) :queue))
-          clojure.lang.PersistentQueue)
-  "No queue in current process")
  (dosync (alter (:queue (.data process)) conj message))
  (if (alive? process)
   true
   false))
 
 (defn queue-empty? [process]
- (assert (= (type @((.data process) :queue))
-          clojure.lang.PersistentQueue)
-  "No queue in current process")
  (empty? @(:queue (.data process))))
 
 (defn queue-top [process]
- (assert (= (type @((.data process) :queue))
-          clojure.lang.PersistentQueue)
-  "No queue in current process")
  (first @(get (.data process) :queue)))
 
 (defn queue-pop [process]
- (assert (= (type @((.data process) :queue))
-          clojure.lang.PersistentQueue)
-  "No queue in current process")
  (let [top (queue-top process)]
   (dosync (alter (:queue (.data process)) pop))
   top))
@@ -249,15 +237,9 @@
  (queue-pop process))
 
 (defn queue-size [process]
- (assert (= (type @((.data process) :queue))
-          clojure.lang.PersistentQueue)
-  "No queue in current process")
  (count @(:queue (.data process))))
 
 (defn queue-flush [process]
- (assert (= (type @((.data process) :queue))
-          clojure.lang.PersistentQueue)
-  "No queue in current process")
  (dosync (alter (:queue (.data process)) #(remove (fn [& args] true) %1)))
  nil)
 
@@ -270,15 +252,10 @@
 * variable.
 * [variable process].
 When queue is empty, blocking."
- [arg & BODY]
- (cond
-  (and (vector? arg) (= 2 (count arg)))
-  (let [[variable process] arg]
-   `(let [~variable (queue-pop-blocking ~process)] ~@BODY))
-  (symbol? arg)
-  `(let [~arg (queue-pop-blocking (self))] ~@BODY)
-  true
-  (throw (Exception. "wrong ARG"))))
+ [[variable process] & BODY]
+ `(if (not (queue-empty? ~process))
+   (let [~variable (queue-pop ~process)]
+    ~@BODY)))
 
 (letfn [(p [arg] (print-str arg))
         (status-string [process]
