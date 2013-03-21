@@ -259,12 +259,20 @@ Server example
 ;; |= STARTED #<GenProcess Server status: alive-linked, state: nil, last-message: [:inc 503]> =|
 
 ;; after a while
-;; == In supervisor #<GenProcess Supervisor status: alive-linked, processes: [#<GenProcess Linker status: alive-linked, count: 4> #<GenProcess Server status: dead, messages: 1, state: nil, last-message: [:inc 10002], [:result [:stopped {:state nil, :last-message [[:inc 10002] #<GenProcess Server status: alive-linked, state: nil, last-message: [:inc 10003]>]}]]> #<GenProcess Server status: alive-linked, state: nil, last-message: [:inc 10003]>], count 3> ==
+;; == In supervisor #<GenProcess Supervisor status: alive-linked, processes: [#<GenProcess Linker
+;; status: alive-linked, count: 4> #<GenProcess Server status: dead, messages: 1, state: nil,
+;; last-message: [:inc 10002], [:result [:stopped {:state nil, :last-message [[:inc 10002]
+;; #<GenProcess Server status: alive-linked, state: nil, last-message: [:inc 10003]>]}]]>
+;; #<GenProcess Server status: alive-linked, state: nil, last-message: [:inc 10003]>], count 3> ==
 ;; == IMPORTANT PROCESS DEATH ==
-;; |= FAIL: #<GenProcess Server status: dead, messages: 1, state: nil, last-message: [:inc 10002], [:result [:stopped {:state nil, :last-message [[:inc 10002] #<GenProcess Server status: alive-linked, state: nil, last-message: [:inc 10003]>]}]]> =|
+;; |= FAIL: #<GenProcess Server status: dead, messages: 1, state: nil, last-message: [:inc 10002],
+;; |[:result [:stopped {:state nil, :last-message [[:inc 10002] #<GenProcess Server status:
+;; |alive-linked, state: nil, last-message: [:inc 10003]>]}]]> =|
 ;; |- with thread #<Thread Thread[Thread-129,5,]> -|
 ;; |- max number of restarts 0 reached in 4 milliseconds -|
-;; == supervisor #<GenProcess Supervisor status: alive-linked, processes: [#<GenProcess Linker status: alive-linked, count: 4> #<GenProcess Server status: alive-linked, state: nil, last-message: [:inc 10003]>], count 2> ==
+;; == supervisor #<GenProcess Supervisor status: alive-linked, processes: [#<GenProcess Linker
+;; status: alive-linked, count: 4> #<GenProcess Server status: alive-linked, state: nil,
+;; last-message: [:inc 10003]>], count 2> ==
 ;; -- with thread #<Thread Thread[Thread-127,5,main]> --
 ;; -- CRASHED --
 ;; |- terminated #<GenProcess Linker status: dead, count: 2, [:result [:terminate :supervisor-terminate]]> -|
