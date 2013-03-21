@@ -205,15 +205,15 @@ linker
 ;; with gen.process/start-link. If supervisor die, those process will be
 ;; stopped with a linker process. Links are one-sided, so supervisor won't
 ;; die, if one of it's processes is terminated.
+
+;; There should be only one linker. It works with
+;; gen.linker-storage/*linker*, but you can manually pass linker
+;; variable to each process you create. Or bind *linker* with binding.
 ```
 
 Server example
 
 ```clojure
-;; There should be only one linker. It works with
-;; gen.linker-storage/*linker*, but you can manually pass linker
-;; variable to each process you create. Or bind *linker* with binding.
-
 (def linker (gen.linker/create))
 (def server1 (gen.server/create
               :init (fn [process args]
