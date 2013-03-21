@@ -104,7 +104,8 @@ supervisor
 ;; == In supervisor #<GenProcess Supervisor status: alive-linked, processes: [#<GenProcess Linker
 ;; status: alive-linked, count: 2> #<GenProcess Loop status: dead, state: nil, [:fail
 ;; #<NullPointerException java.lang.NullPointerException>]>], count 2> ==
-;; |= FAIL: #<GenProcess Loop status: dead, state: nil, [:fail #<NullPointerException java.lang.NullPointerException>]> =|
+;; |= FAIL: #<GenProcess Loop status: dead, state: nil, [:fail #<NullPointerException
+;; java.lang.NullPointerException>]> =|
 ;; |- with thread #<Thread Thread[Thread-72,5,]> -|
 ;; |- max number of restarts 0 reached in 4 milliseconds -|
 
@@ -142,7 +143,8 @@ supervisor
 ;; |= STARTED #<GenProcess Linker status: alive-linked, count: 4> =|
 
 supervisor
-;; => #<GenProcess Supervisor status: alive-linked, processes: [#<GenProcess Linker status: alive-linked, count: 2>], count 1>
+;; => #<GenProcess Supervisor status: alive-linked, processes: [#<GenProcess Linker status:
+;; alive-linked, count: 2>], count 1>
 
 @(gen.process/stop linker :just-die)
 ;; => [:terminated :ok]
@@ -266,8 +268,8 @@ Server example
 ;; #<GenProcess Server status: alive-linked, state: nil, last-message: [:inc 10003]>], count 3> ==
 ;; == IMPORTANT PROCESS DEATH ==
 ;; |= FAIL: #<GenProcess Server status: dead, messages: 1, state: nil, last-message: [:inc 10002],
-;; |[:result [:stopped {:state nil, :last-message [[:inc 10002] #<GenProcess Server status:
-;; |alive-linked, state: nil, last-message: [:inc 10003]>]}]]> =|
+;; [:result [:stopped {:state nil, :last-message [[:inc 10002] #<GenProcess Server status:
+;; alive-linked, state: nil, last-message: [:inc 10003]>]}]]> =|
 ;; |- with thread #<Thread Thread[Thread-129,5,]> -|
 ;; |- max number of restarts 0 reached in 4 milliseconds -|
 ;; == supervisor #<GenProcess Supervisor status: alive-linked, processes: [#<GenProcess Linker
