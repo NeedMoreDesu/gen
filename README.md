@@ -10,11 +10,24 @@ return values and recieve messages. Processes are pretty-printed in repl.
 Loop, server, linker and supervisor modules aids to create a process
 you want, accepting functions as arguments.
 
+Pre-Alpha Status
+----
+Function definitions may change, project is generally untested. Be wary.
+
+Releases and dependency information
+----
+
+[Leiningen](http://github.com/technomancy/leiningen/) dependency information:
+```
+[actors/gen "0.1.0-SNAPSHOT"]
+```
+
 ## Usage
 
 Simple loop example
 
 ```clojure
+(require '[gen process loop])
 (def loop1 (gen.loop/create
             :init (fn [process arg]
                    (println "I've initialized with" arg)
@@ -43,6 +56,7 @@ loop1
 Some supervisor and linker examples
 
 ```clojure
+(require '[gen process loop linker supervisor])
 (def linker (gen.linker/create))
 (def supervisor (gen.supervisor/create
                  :processes #{linker}
@@ -216,6 +230,8 @@ linker
 Server example
 
 ```clojure
+(require '[gen process server linker supervisor])
+
 (def linker (gen.linker/create))
 (def server1 (gen.server/create
               :init (fn [process args]
@@ -290,6 +306,8 @@ Server example
 
 Copyright © 2013 NeedMoreDesu desu@horishniy.org.ua
 
-This work is free. You can redistribute it and/or modify it under the
-terms of the Do What The Fuck You Want To Public License, Version 2,
-as published by Sam Hocevar. See the COPYING file for more details.
+This program is free software. It comes without any warranty, to
+the extent permitted by applicable law. You can redistribute it
+and/or modify it under the terms of the Do What The Fuck You Want
+To Public License, Version 2, as published by Sam Hocevar. See
+COPYING for more details.
