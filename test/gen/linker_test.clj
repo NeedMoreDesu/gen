@@ -68,94 +68,27 @@
 (pr/state-of t4)
 (pr/have-dead-links t2)
 (pr/state-of t3_1)
-(Thread. (fn[] (/ 0 0))) -- can I print stacktrace, given a thread? 
-(pr/state-of t4)(filter #(not (gen.process/alive? %1)) #{t3})
-(def handler (proxy [Thread$UncaughtExceptionHandler] [] 
-  (uncaughtException [thread exception]
-    (println thread exception))))
-(def thread (Thread. (bound-fn[] (/ 0 0))))
-(.setUncaughtExceptionHandler thread handler)
-(.start thread)
-pprint  10) @(:thread (.data t4))
-(pr/message t3_2 'hi)
-(pr/message t1 "Eto ti?")
-(pr/state-of t1)
-(pr/state-of t2)
-(pr/state-of t3)
-(defn qqq [& {:keys [x y z] :or {x 10 y 20} :as args}] (assoc args :x x :y y))
-(pr/result-of t1)
-(pr/result-of t2)
-(def t2p (second t2))
-@(pr/stop t1 :kill)
-@(pr/stop t2 :kill)
-@(pr/stop t3_1 :kill)
-@(pr/stop t3_2 :kill)
-@(pr/stop t4 :kill)
-(pr/alive? t4)
-(pr/result-of t2)
-(.toString ls/*linker*)
-(def q ls/storage-create)
-(.toString q)
-(ls/storage-add *linker* @(:thread @t1) t1)
-(:links @(second t2))
-(:return-promise (def t3 (pr/start (second t2))))
-(count (ls/storage-get-processes *linker*))
-(deftype her [h])
-(her. 2)
-(defmethod print-method her
- [o w]
- (print-simple
- (str "#<" "Lalala: "    (.h o) " >")
-  w))
 
+(def loop1 (gen.loop/create
+            :init (fn [process arg]
+                   (println "I've initialized with" arg)
+                   [:run arg])
+            :body (fn [state process]
+                   (println "Im running with" state)
+                   (Thread/sleep 2000)
+                   [:run (inc state)])))
+;; => #'test/loop1
 
-(defn thread-exception-removal
-  "Exceptions thrown in the graphics rendering thread generally cause
-  the entire REPL to crash! It is good to suppress them while trying
-  things out to shorten the debug loop."
-  []
-  (.setUncaughtExceptionHandler
-   (Thread/currentThread)
-   (proxy [Thread$UncaughtExceptionHandler] []
-     (uncaughtException
-       [thread thrown]
-       (println "uncaught-exception thrown in " thread)
-       (println (.getMessage thrown))))))
-(thread-exception-removal)
-(/ 12 0)
-
-(Thread/setDefaultUncaughtExceptionHandler handler)
-(Thread/setDefaultUncaughtExceptionHandler
- (reify Thread$UncaughtExceptionHandler
-   (uncaughtException [this thread throwable]
-     (println throwable)
-     )))
-
-(def handler (proxy [Thread$UncaughtExceptionHandler] [] 
-  (uncaughtException [thread exception]
-    (println thread exception))))
-
-(Thread/setDefaultUncaughtExceptionHandler handler)
-
-(/ 12 0)
-
-    (def handler (proxy [Thread$UncaughtExceptionHandler] []
-      (uncaughtException [thread exception]
-        (println thread exception))))
-    (def thread (Thread. (bound-fn[] (/ 0 0))))
-    (.setUncaughtExceptionHandler thread handler)
-    (.start thread)
-
-(.start
- (Thread.
-  (bound-fn []
-   (try ((bound-fn [] (/ 0 0)))
-    (catch Exception e (clojure.stacktrace/print-stack-trace (clojure.stacktrace/root-cause e) 2))))))
-
-(instance? Exception (try (/ 0 0) (catch Exception e e)))
-(defn foo [x y] (+ x y))
-(defn bar [x y] (* x y))
-(defn c [x] (comp #(foo x %) #(bar x %)))
-(defn c [x] (comp (partial foo x) (partial bar x)))
-
-(throw (Exception. "В сортах говна не разбираюсь"))
+@(gen.process/start loop1 8999) ; start and stop are futures, deref to see result
+;; => [:started #<Thread Thread[Thread-64,5,main]>]
+;; At this point you should see things in your repl
+loop1
+;; => #<GenProcess Loop status: alive-linked, state: 9030>
+@(gen.process/stop loop1 :nya-death)
+;; => [:terminated :ok]
+(gen.process/result-of loop1)
+;; => [:result [:terminated :nya-death]]
+loop1
+;; => #<GenProcess Loop status: dead, state: 9064, [:result [:terminated :nya-death]]>
+(gen.process/state-of loop1)
+;; => [:result 9064]
