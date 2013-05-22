@@ -15,54 +15,49 @@
 (def ^:dynamic *stacktraces* true)
 (def ^:dynamic *stacktrace-max-length* nil)
 
-(declare to-string)
-
-(deftype GenProcess [data]
- Object
- (toString [self]
-  (to-string self)))
-
 (defn create
- [& {:keys [thread start stop-timeout queue linker links return-promise stop-promise state-getter type]
+ [& {:keys [name thread start stop-timeout queue linker links return-promise stop-promise state-getter type]
      :or {type :default
           queue (clojure.lang.PersistentQueue/EMPTY)
           links #{}
           stop-timeout 500
           start (fn [process stop-promise] nil)
           stop (fn [reason process] nil)}}]
- (let [process (GenProcess. {:type type
-                             :thread (ref thread)
-                             :return-promise (ref return-promise)
-                             :stop-promise (ref stop-promise)
-                             :state-getter state-getter
-                             :start start
-                             :stop-timeout stop-timeout
-                             :queue (ref queue)
-                             :linker linker
-                             :links (ref links)})]
+ (let [process (with-meta {:name name
+                           :type type
+                           :thread (ref thread)
+                           :return-promise (ref return-promise)
+                           :stop-promise (ref stop-promise)
+                           :state-getter state-getter
+                           :start start
+                           :stop-timeout stop-timeout
+                           :queue (ref queue)
+                           :linker linker
+                           :links (ref links)}
+                {:type ::process})]
   process))
 
 (defn process? [arg]
- (= (type arg) gen.process.GenProcess))
+ (= (type arg) ::process))
 
 (defn alive? [process]
- (let [thread @(:thread (.data process))]
+ (let [thread @(:thread process)]
   (if (= (type thread) java.lang.Thread)
    (.isAlive thread)
    false)))
 
 (defn get-thread [process]
- @(:thread (.data process)))
+ @(:thread process))
 
 (defn add-to-linker
  ([process]
-  (if (:linker (.data process))
-   (gen.linker-storage/storage-add (:linker (.data process)) @(:thread (.data process)) process)))
+  (if (:linker process)
+   (gen.linker-storage/storage-add (:linker process) @(:thread process) process)))
  ([process linker]
-  (gen.linker-storage/storage-add linker @(:thread (.data process)) process)))
+  (gen.linker-storage/storage-add linker @(:thread process) process)))
 
 (defn result-of [process]
- (let [promise @(:return-promise (.data process))]
+ (let [promise @(:return-promise process)]
   (if promise
    (if (realized? promise)
     (if (instance? Exception @promise)
@@ -70,11 +65,11 @@
      [:result @promise])
     (if (alive? process)
      [:fail :still-running]
-     [:fail :!not-running-not-realized]))
+     [:fail :error!not-running-not-realized]))
    [:fail :no-result-promise])))
 
 (defn state-of [process]
- (let [getter (:state-getter (.data process))]
+ (let [getter (:state-getter process)]
   (if getter
    [:result (getter)]
    [:fail :no-state-getter])))
@@ -89,14 +84,14 @@
     max-length))))
 
 (letfn [(change-thread [process thread]
-         (dosync (ref-set (:thread (.data process)) thread))
+         (dosync (ref-set (:thread process) thread))
          (add-to-linker process)
          true)
         (change-return-promise [process promise]
-         (dosync (ref-set (:return-promise (.data process)) promise))
+         (dosync (ref-set (:return-promise process) promise))
          true)
         (change-stop-promise [process promise]
-         (dosync (ref-set (:stop-promise (.data process)) promise))
+         (dosync (ref-set (:stop-promise process) promise))
          true)]
  (defn start [process args]
   (future
@@ -106,7 +101,7 @@
      (change-stop-promise process nil)
      (change-return-promise process nil)
      (let [stop-promise (promise)
-           starter (((.data process) :start) process args stop-promise)]
+           starter ((process :start) process args stop-promise)]
       (if (fn? starter)
        (let [return-promise (promise)
              thread (Thread.
@@ -118,7 +113,7 @@
                          (if *stacktraces*
                           (do
                            (println "=== In process" process "===")
-                           (println "=== In thread" @(:thread (.data process)) "===")
+                           (println "=== In thread" @(:thread process) "===")
                            (clojure.stacktrace/print-stack-trace
                             e
                             *stacktrace-max-length*)
@@ -127,8 +122,8 @@
         (if
          (dosync
           (and
-           (not @(:stop-promise (.data process)))
-           (not @(:return-promise (.data process)))
+           (not @(:stop-promise process))
+           (not @(:return-promise process))
            (change-stop-promise process stop-promise)
            (change-return-promise process return-promise)
            true))
@@ -140,19 +135,19 @@
        [:fail :bad-starter])))))))
 
 (defn get-links [process]
- @((.data process) :links))
+ @(process :links))
 
 (defn add-links [process links]
  (doall (map #(assert (or
                        (= (type %1) Thread)
                        (process? %1))) links))
- (dosync (alter (:links (.data process)) #(apply conj (set %1) (set %2)) links)))
+ (dosync (alter (:links process) #(apply conj (set %1) (set %2)) links)))
 
 (defn set-links [process links]
  (doall (map #(assert (or
                        (= (type %1) Thread)
                        (process? %1))) links))
- (dosync (ref-set (:links (.data process)) (set links))))
+ (dosync (ref-set (:links process) (set links))))
 
 (defn have-dead-links [process]
  (if
@@ -168,12 +163,12 @@
   false))
 
 (defn kill [process]
- (let [thread @(:thread (.data process))]
+ (let [thread @(:thread process)]
   (cond
    (= (type thread) java.lang.Thread)
    (do
     (.stop thread)
-    (deliver (:return-promise (.data process)) :killed)
+    (deliver (:return-promise process) :killed)
     true)
    true
    false)))
@@ -183,9 +178,9 @@
   (try
    (if (not (alive? process))
     [:fail :not-alive]
-    (let [st (:stop-timeout (.data process))
+    (let [st (:stop-timeout process)
           thread (get-thread process)
-          stop-promise @(:stop-promise (.data process))]
+          stop-promise @(:stop-promise process)]
      (if (integer? st)
       (do
        (deliver stop-promise reason)
@@ -223,20 +218,20 @@
   @(start-link process args)))
 
 (defn message [process message]
- (dosync (alter (:queue (.data process)) conj message))
+ (dosync (alter (:queue process) conj message))
  (if (alive? process)
   true
   false))
 
 (defn queue-empty? [process]
- (empty? @(:queue (.data process))))
+ (empty? @(:queue process)))
 
 (defn queue-top [process]
- (first @(get (.data process) :queue)))
+ (first @(get process :queue)))
 
 (defn queue-pop [process]
  (let [top (queue-top process)]
-  (dosync (alter (:queue (.data process)) pop))
+  (dosync (alter (:queue process) pop))
   top))
 
 (defn queue-pop-blocking [process]
@@ -245,10 +240,10 @@
  (queue-pop process))
 
 (defn queue-size [process]
- (count @(:queue (.data process))))
+ (count @(:queue process)))
 
 (defn queue-flush [process]
- (dosync (alter (:queue (.data process)) #(remove (fn [& args] true) %1)))
+ (dosync (alter (:queue process) #(remove (fn [& args] true) %1)))
  nil)
 
 (defn self [& {:keys [storage]
@@ -265,14 +260,15 @@ When queue is empty, blocking."
    (let [~variable (queue-pop ~process)]
     ~@BODY)))
 
+(def ^:dynamic *print-state* false)
 (letfn [(p [arg] (print-str arg))
         (status-string [process]
          (str
           " status: "
           (if (alive? process)
            (str "alive"
-            (let [linker (:linker (.data process))
-                  thread @(:thread (.data process))]
+            (let [linker (:linker process)
+                  thread @(:thread process)]
              (and
               linker thread
               (gen.linker-storage/storage-get-process-by-thread linker thread)
@@ -285,48 +281,74 @@ When queue is empty, blocking."
          (let [response (result-of process)]
           (if (not (= [:fail :still-running] response))
            (str ", " response))))]
- (defn to-string [process]
-  (case (:type (.data process))
-   :linker
-   (str "Linker"
-    (status-string process)
-    (queue-string process)
-    (let [[r linker-storage] (state-of process)]
-     (if (and (= r :result) linker-storage)
-      (str ", " linker-storage)))
-    (result-string process))
-   :loop
-   (str "Loop"
-    (status-string process)
-    (queue-string process)
-    (let [[r state] (state-of process)]
-     (if (= r :result)
-      (str ", state: " (p state))))
-    (result-string process))
-   :server
-   (str "Server"
-    (status-string process)
-    (queue-string process)
-    (let [[r {:keys [state last-message]}] (state-of process)]
-     (if (= r :result)
-      (str ", state: " (p state) ", last-message: " (p (first last-message)))))
-    (result-string process))
-   :supervisor
-   (str "Supervisor"
-    (status-string process)
-    (queue-string process)
-    (let [[r {processes :processes}] (state-of process)]
-     (if (= r :result)
-      (str
-       ", processes: ["
-       (str/join " "
-        (map
-         (fn[process]
-          (p process))
-         processes))
-       "], count " (count processes))))
-    (result-string process))
-   (str
-    (:type (.data process))
-    (status-string process)
-    (if (not (queue-empty? process)) (str ", messages: " (queue-size process)))))))
+ (let [looked-up-processes (atom #{})]
+  (defn to-string [process]
+   (if (@looked-up-processes process)
+    "~recursion~"
+    (do
+     (swap! looked-up-processes conj process)
+     ((fn[a b] a)
+      (case (:type process)
+       :linker
+       (str
+        (:name process) " "
+        "Linker"
+        (status-string process)
+        (queue-string process)
+        (let [[r linker-storage] (state-of process)]
+         (if (and (= r :result) linker-storage)
+          (if *print-state* (str ", " linker-storage))))
+        (result-string process))
+       :loop
+       (str
+        (:name process) " "
+        "Loop"
+        (status-string process)
+        (queue-string process)
+        (let [[r state] (state-of process)]
+         (if (= r :result)
+          (if *print-state* (str ", state: " (p state)))))
+        (result-string process))
+       :server
+       (str
+        (:name process) " "
+        "Server"
+        (status-string process)
+        (queue-string process)
+        (let [[r {:keys [state last-message]}] (state-of process)]
+         (if (= r :result)
+          (str
+           (if *print-state* (str ", state: " (p state)) "")
+           ", last-message: " (p (first last-message)))))
+        (result-string process))
+       :supervisor
+       (str
+        (:name process) " "
+        "Supervisor"
+        (status-string process)
+        (queue-string process)
+        (let [[r {processes :processes}] (state-of process)]
+         (if (= r :result)
+          (str
+           (if *print-state*
+            (str
+             ", processes: ["
+             (str/join " "
+              (map
+               (fn[process]
+                (p process))
+               processes)))
+            "")
+           "], count " (count processes))))
+        (result-string process))
+       (str
+        (:name process) " "
+        (:type process)
+        (status-string process)
+        (if (not (queue-empty? process)) (str ", messages: " (queue-size process)))))
+      (swap! looked-up-processes disj process)))))))
+(defmethod print-method ::process
+ [o w]
+ (print-simple
+  (to-string o)
+  w))

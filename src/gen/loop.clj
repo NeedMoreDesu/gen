@@ -9,7 +9,7 @@
 (ns gen.loop
  (:require [gen process linker-storage]))
 
-(defn create [& {:keys [init body terminate timeout linker state-getter type]
+(defn create [& {:keys [init body terminate timeout linker state-getter type name]
                  :or {timeout 500
                       init (fn [process args] [:run args])
                       terminate (fn [reason state process] [:terminated reason])
@@ -39,5 +39,6 @@
                      :start start-fn
                      :stop-timeout timeout
                      :state-getter state-getter-fn
-                     :linker linker)]
+                     :linker linker
+                     :name name)]
   self-process))

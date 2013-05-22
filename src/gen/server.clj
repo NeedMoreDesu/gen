@@ -10,16 +10,16 @@
  (:require [gen loop process linker-storage internals]))
 
 (defn message
- ([to message]
+ ([to message#]
   (let [from (gen.process/self)]
-   (if (gen.process/process? from)
-    (message from to message))))
+   (message from to message#)))
  ([from to message]
   (gen.process/message to [message from])))
 
-(defn create [& {:keys [init handler terminate timeout linker state-getter type]
+(defn create [& {:keys [init handler terminate timeout linker state-getter type name]
                  :or {type :server
                       init (fn [process args] [:run args])
+                      terminate (fn [reason state process] [:terminated reason])
                       handler (fn [message state process] [:run state])
                       linker gen.linker-storage/*linker*}
                  :as args}]
@@ -38,5 +38,7 @@
             [command {:state state :last-message message}]))
           (Thread/sleep gen.internals/*sleep-interval*)
           [:run {:state state :last-message last-message}]))
-  (apply concat (dissoc args :init :handler))))
+  :terminate (fn [reason {state :state last-message :last-message} process]
+              (terminate reason state process))
+  (apply concat (dissoc args :init :handler :type :terminate))))
 

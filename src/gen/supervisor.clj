@@ -213,7 +213,7 @@
            {:processes (disj processes process)
             :rules (dissoc rules process)
             :timers (dissoc timers process)})))}]
-  (defn create [& {:keys [processes rules linker default-rule]
+  (defn create [& {:keys [processes rules linker default-rule name]
                    :or {processes #{}
                         rules {}
                         default-rule (rule-create)
@@ -223,6 +223,7 @@
    (assert (map? rules))
    (doall (map (bound-fn [[_ rule#]] (assert (rule? rule#))) rules))
    (gen.loop/create
+    :name name
     :type :supervisor
     :init
     (bound-fn [process args]
