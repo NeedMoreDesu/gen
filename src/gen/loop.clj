@@ -7,7 +7,8 @@
 ;;; http://www.wtfpl.net/ for more details.
 
 (ns gen.loop
- (:require [gen process linker-storage]))
+ (:require [gen process linker-storage])
+ (:use [slingshot.slingshot]))
 
 (defn create [& {:keys [init body terminate timeout linker state-getter type name]
                  :or {timeout 500
@@ -25,14 +26,18 @@
  (let [state# (atom nil)
        start-fn (bound-fn [process args stop-promise]
                  (bound-fn []
-                  (loop [[command state] (init process args)]
-                   (assert (#{:run :stop :self-term} command))
-                   (reset! state# state)
-                   (cond
-                    (realized? stop-promise) (terminate @stop-promise state process)
-                    (= command :stop) [:stopped state]
-                    (= command :self-term) (terminate :self-term state process)
-                    (= command :run) (recur (body state process))))))
+                  (try+
+                   (loop [[command state] (init process args)]
+                    (assert (#{:run :stop :self-term} command))
+                    (reset! state# state)
+                    (cond
+                     (realized? stop-promise) (terminate @stop-promise state process)
+                     (= command :stop) (terminate :stop state process)
+                     (= command :self-term) (terminate :self-term state process)
+                     (= command :run) (recur (body state process))))
+                    (catch Object o
+                     (terminate o state# process)
+                     (throw+ o)))))
        state-getter-fn (bound-fn [] (state-getter @state#))
        self-process (gen.process/create
                      :type type

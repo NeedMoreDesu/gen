@@ -284,69 +284,71 @@ When queue is empty, blocking."
  (let [looked-up-processes (atom #{})]
   (defn to-string [process]
    (if (@looked-up-processes process)
-    "~recursion~"
-    (do
-     (swap! looked-up-processes conj process)
-     ((fn[a b] a)
-      (case (:type process)
-       :linker
-       (str
-        (:name process) " "
-        "Linker"
-        (status-string process)
-        (queue-string process)
-        (let [[r linker-storage] (state-of process)]
-         (if (and (= r :result) linker-storage)
-          (if *print-state* (str ", " linker-storage))))
-        (result-string process))
-       :loop
-       (str
-        (:name process) " "
-        "Loop"
-        (status-string process)
-        (queue-string process)
-        (let [[r state] (state-of process)]
-         (if (= r :result)
-          (if *print-state* (str ", state: " (p state)))))
-        (result-string process))
-       :server
-       (str
-        (:name process) " "
-        "Server"
-        (status-string process)
-        (queue-string process)
-        (let [[r {:keys [state last-message]}] (state-of process)]
-         (if (= r :result)
-          (str
-           (if *print-state* (str ", state: " (p state)) "")
-           ", last-message: " (p (first last-message)))))
-        (result-string process))
-       :supervisor
-       (str
-        (:name process) " "
-        "Supervisor"
-        (status-string process)
-        (queue-string process)
-        (let [[r {processes :processes}] (state-of process)]
-         (if (= r :result)
-          (str
-           (if *print-state*
-            (str
-             ", processes: ["
-             (str/join " "
-              (map
-               (fn[process]
-                (p process))
-               processes)))
-            "")
-           "], count " (count processes))))
-        (result-string process))
-       (str
-        (:name process) " "
-        (:type process)
-        (status-string process)
-        (if (not (queue-empty? process)) (str ", messages: " (queue-size process)))))
-      (swap! looked-up-processes disj process)))))))
+    "#<~recursion~>"
+    (str "#<"
+     (do
+      (swap! looked-up-processes conj process)
+      ((fn[a b] a)
+       (case (:type process)
+        :linker
+        (str
+         (:name process) " "
+         "Linker"
+         (status-string process)
+         (queue-string process)
+         (let [[r linker-storage] (state-of process)]
+          (if (and (= r :result) linker-storage)
+           (if *print-state* (str ", " linker-storage))))
+         (result-string process))
+        :loop
+        (str
+         (:name process) " "
+         "Loop"
+         (status-string process)
+         (queue-string process)
+         (let [[r state] (state-of process)]
+          (if (= r :result)
+           (if *print-state* (str ", state: " (p state)))))
+         (result-string process))
+        :server
+        (str
+         (:name process) " "
+         "Server"
+         (status-string process)
+         (queue-string process)
+         (let [[r {:keys [state last-message]}] (state-of process)]
+          (if (= r :result)
+           (str
+            (if *print-state* (str ", state: " (p state)) "")
+            ", last-message: " (p (first last-message)))))
+         (result-string process))
+        :supervisor
+        (str
+         (:name process) " "
+         "Supervisor"
+         (status-string process)
+         (queue-string process)
+         (let [[r {processes :processes}] (state-of process)]
+          (if (= r :result)
+           (str
+            (if *print-state*
+             (str
+              ", processes: ["
+              (str/join " "
+               (map
+                (fn[process]
+                 (p process))
+                processes)))
+             "")
+            "], count " (count processes))))
+         (result-string process))
+        (str
+         (:name process) " "
+         (:type process)
+         (status-string process)
+         (if (not (queue-empty? process)) (str ", messages: " (queue-size process)))))
+       (swap! looked-up-processes disj process)))
+     ">")))))
 (defmethod print-method ::process
  [o w]
  (print-simple

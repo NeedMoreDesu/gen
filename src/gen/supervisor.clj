@@ -213,11 +213,20 @@
            {:processes (disj processes process)
             :rules (dissoc rules process)
             :timers (dissoc timers process)})))}]
-  (defn create [& {:keys [processes rules linker default-rule name]
+  (defn create
+   "PROCESSES is a set of processes, which are supervised.
+RULES are process->rule map. Rules are created with gen.supervisor/rule-create.
+LINKER is linker storage for this supervisor. Linker storage is a place, where
+linker information is stored. It is not linked without running linker.
+gen.linker-storage/*linker* by default.
+If SYSTEM-EXIT is true, program will terminate with (System/exit 0) after
+supervisor is terminated. Should be used on the main supervisor."
+   [& {:keys [processes rules linker default-rule name system-exit]
                    :or {processes #{}
                         rules {}
                         default-rule (rule-create)
-                        linker gen.linker-storage/*linker*}
+                        linker gen.linker-storage/*linker*
+                        system-exit false}
                    :as args}]
    (assert (set? processes))
    (assert (map? rules))
@@ -310,6 +319,8 @@
                  (println "|- terminated" process "-|")
                  (println "|- with thread" (gen.process/get-thread process) "-|")))))
              processes))
+     (if system-exit
+      (System/exit 0))
      [:terminated reason])
     :timeout nil
     :linker linker))))
