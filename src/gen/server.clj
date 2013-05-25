@@ -20,7 +20,7 @@
                  :or {type :server
                       init (fn [process args] [:run args])
                       terminate (fn [reason state process] [:terminated reason])
-                      handler (fn [message state process] [:run state])
+                      handler (fn [[message from] state process] [:run state])
                       linker gen.linker-storage/*linker*}
                  :as args}]
  (assert (fn? init))
