@@ -251,14 +251,12 @@
  (gen.linker-storage/storage-get-process-by-thread storage (Thread/currentThread)))
 
 (defmacro receive
- "ARG is either
-* variable.
-* [variable process].
-When queue is empty, blocking."
- [[variable process] & BODY]
+ "ARG is [variable process]. Non-blocking."
+ [[variable process] TRUE-BODY & [FALSE-BODY]]
  `(if (not (queue-empty? ~process))
    (let [~variable (queue-pop ~process)]
-    ~@BODY)))
+    ~TRUE-BODY)
+   ~FALSE-BODY))
 
 (def ^:dynamic *print-state* false)
 (letfn [(p [arg] (print-str arg))
@@ -283,11 +281,11 @@ When queue is empty, blocking."
            (str ", " response))))]
  (let [looked-up-processes (atom #{})]
   (defn to-string [process]
-   (if (@looked-up-processes process)
+   (if (get @looked-up-processes process)
     "#<~recursion~>"
     (str "#<"
      (do
-      (swap! looked-up-processes conj process)
+      (reset! looked-up-processes (conj @looked-up-processes process))
       ((fn[a b] a)
        (case (:type process)
         :linker
@@ -347,7 +345,7 @@ When queue is empty, blocking."
          (:type process)
          (status-string process)
          (if (not (queue-empty? process)) (str ", messages: " (queue-size process)))))
-       (swap! looked-up-processes disj process)))
+       (reset! looked-up-processes (disj @looked-up-processes process))))
      ">")))))
 (defmethod print-method ::process
  [o w]

@@ -32,12 +32,12 @@
          (let [[command state] (init process args)]
           [command {:state state}]))
   :body (bound-fn [{state :state last-message :last-message} process]
-         (or
-          (gen.process/receive [message process]
-           (let [[command state] (handler message state process)]
-            [command {:state state :last-message message}]))
-          (Thread/sleep gen.internals/*sleep-interval*)
-          [:run {:state state :last-message last-message}]))
+         (gen.process/receive [message process]
+          (let [[command state] (handler message state process)]
+           [command {:state state :last-message message}])
+          (do
+           (Thread/sleep gen.internals/*sleep-interval*)
+           [:run {:state state :last-message last-message}])))
   :terminate (fn [reason {state :state last-message :last-message} process]
               (terminate reason state process))
   (apply concat (dissoc args :init :handler :type :terminate))))
