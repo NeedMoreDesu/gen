@@ -251,7 +251,8 @@ supervisor is terminated. Should be used on the main supervisor."
           :as state}
          process]
      (Thread/sleep gen.internals/*sleep-interval*)
-     (if (gen.process/queue-empty? process)
+     (gen.process/receive [[[action data] _from] process]
+      [:run ((get action-handlers action) data processes rules timers process)]
       (let [dead-processes
             (filter #(do
                       (Thread/sleep gen.internals/*sleep-interval*)
@@ -300,9 +301,7 @@ supervisor is terminated. Should be used on the main supervisor."
               no-hope?)]
         (if no-hope?
          [:self-term state]
-         [:run state])))
-      (gen.process/receive [[action data] process]
-       [:run ((get action-handlers action) data processes rules timers process)])))
+         [:run state])))))
     :terminate
     (bound-fn [reason {:keys [processes] :as state} process]
      (if *print-crash-reports*

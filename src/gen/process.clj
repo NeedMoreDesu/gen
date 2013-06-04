@@ -16,9 +16,10 @@
 (def ^:dynamic *stacktrace-max-length* nil)
 
 (defn create
- [& {:keys [name thread start stop-timeout queue linker links return-promise stop-promise state-getter type]
+ [& {:keys [name thread start stop-timeout message-queue linker links return-promise stop-promise state-getter receive-promise-queue type]
      :or {type :default
-          queue (clojure.lang.PersistentQueue/EMPTY)
+          message-queue (clojure.lang.PersistentQueue/EMPTY)
+          receive-promise-queue (clojure.lang.PersistentQueue/EMPTY)
           links #{}
           stop-timeout 500
           start (fn [process stop-promise] nil)
@@ -31,7 +32,8 @@
                            :state-getter state-getter
                            :start start
                            :stop-timeout stop-timeout
-                           :queue (ref queue)
+                           :message-queue (ref message-queue)
+                           :receive-promise-queue (ref receive-promise-queue)
                            :linker linker
                            :links (ref links)}
                 {:type ::process})]
@@ -217,22 +219,22 @@
   @(stop process reason)
   @(start-link process args)))
 
-(defn message [process message]
- (dosync (alter (:queue process) conj message))
- (if (alive? process)
-  true
-  false))
-
 (defn queue-empty? [process]
- (empty? @(:queue process)))
+ (empty? @(:message-queue process)))
 
 (defn queue-top [process]
- (first @(get process :queue)))
+ (first @(get process :message-queue)))
 
 (defn queue-pop [process]
- (let [top (queue-top process)]
-  (dosync (alter (:queue process) pop))
-  top))
+ (let [p (promise)]
+  (if (queue-empty? process)
+   (do
+    (dosync (alter (:receive-promise-queue process) conj p))
+    p)
+   (let [top (queue-top process)]
+    (dosync (alter (:message-queue process) pop))
+    (deliver p top)
+    p))))
 
 (defn queue-pop-blocking [process]
  (while (queue-empty? process)
@@ -240,23 +242,51 @@
  (queue-pop process))
 
 (defn queue-size [process]
- (count @(:queue process)))
+ (count @(:message-queue process)))
 
 (defn queue-flush [process]
- (dosync (alter (:queue process) #(remove (fn [& args] true) %1)))
+ (dosync (alter (:message-queue process) #(remove (fn [& args] true) %1)))
  nil)
 
 (defn self [& {:keys [storage]
                :or {storage gen.linker-storage/*linker*}}]
  (gen.linker-storage/storage-get-process-by-thread storage (Thread/currentThread)))
 
+(defn message-internal [process message]
+ (if (empty? @(:receive-promise-queue process))
+  (do
+   (dosync (alter (:message-queue process) conj message))
+   (alive? process))
+  (do
+   (let [p (first @(:receive-promise-queue process))]
+    (deliver p message)
+    (dosync (alter (:receive-promise-queue process) pop))
+    (alive? process)))))
+
+(defn message
+ "If no FROM message, attempt to lookup your process in
+default linker-storage by your thread. If it's not there,
+from is nil."
+ ([to message#]
+  (let [from (self)]
+   (message from to message#)))
+ ([from to message]
+  (message-internal to [message from])))
+
 (defmacro receive
- "ARG is [variable process]. Non-blocking."
- [[variable process] TRUE-BODY & [FALSE-BODY]]
- `(if (not (queue-empty? ~process))
-   (let [~variable (queue-pop ~process)]
-    ~TRUE-BODY)
-   ~FALSE-BODY))
+ "VARIABLE is variable, which will hold message(or promise, see below).
+If FALSE-BODY is given, execute TRUE-BODY only if message
+was received now, otherwise execute FALSE-BODY.
+If FALSE-BODY is not given, variable will hold promise, that
+ will hold message, when it will be received. Use deref."
+ ([[variable process] TRUE-BODY FALSE-BODY]
+  `(if (not (queue-empty? ~process))
+    (let [~variable @(queue-pop ~process)]
+     ~TRUE-BODY)
+    ~FALSE-BODY))
+ ([[variable process] BODY]
+  `(let [~variable (queue-pop ~process)]
+    ~BODY)))
 
 (def ^:dynamic *print-state* false)
 (letfn [(p [arg] (print-str arg))
