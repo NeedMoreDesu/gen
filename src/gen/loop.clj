@@ -27,17 +27,23 @@
        start-fn (bound-fn [process args stop-promise]
                  (bound-fn []
                   (try+
-                   (loop [[command state] (init process args)]
-                    (assert (#{:run :stop :self-term} command))
-                    (reset! state# state)
-                    (cond
-                     (realized? stop-promise) (terminate @stop-promise state process)
-                     (= command :stop) (terminate :stop state process)
-                     (= command :self-term) (terminate :self-term state process)
-                     (= command :run) (recur (body state process))))
-                    (catch Object o
-                     (terminate o state process)
-                     (throw+ o)))))
+                   (do
+                    (reset! state# args)
+                    (let [result (init process args)]
+                     (assert (vector? result) "Init fn must return [command state] vector")
+                     (loop [result result]
+                      (assert (vector? result) "Body fn must return [command state] vector")
+                      (let [[command state] result]
+                       (assert (#{:run :stop :self-term} command))
+                       (reset! state# state)
+                       (cond
+                        (realized? stop-promise) (terminate @stop-promise state process)
+                        (= command :stop) (terminate :stop state process)
+                        (= command :self-term) (terminate :self-term state process)
+                        (= command :run) (recur (body state process)))))))
+                   (catch Object o
+                    (terminate o @state# process)
+                    (throw+ o)))))
        state-getter-fn (bound-fn [] (state-getter @state#))
        self-process (gen.process/create
                      :type type
