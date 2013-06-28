@@ -25,9 +25,9 @@
          (let [[command state] (init process args)]
           [command {:state state}]))
   :body (bound-fn [{state :state last-message :last-message} process]
-         (gen.process/receive [message+from process]
-          (let [[command state] (handler @message+from state process)]
-           [command {:state state :last-message @message+from}])))
+         (gen.process/receive [message process]
+          (let [[command state] (handler @message state process)]
+           [command {:state state :last-message @message}])))
   :terminate (fn [reason {state :state last-message :last-message} process]
               (terminate reason state process))
   (apply concat (dissoc args :init :handler :type :terminate))))

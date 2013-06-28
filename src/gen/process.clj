@@ -22,8 +22,7 @@
           receive-promise-queue (clojure.lang.PersistentQueue/EMPTY)
           links #{}
           stop-timeout 500
-          start (fn [process stop-promise] nil)
-          stop (fn [reason process] nil)}}]
+          start (fn [process args stop-promise] nil)}}]
  (let [process (with-meta {:name name
                            :type type
                            :thread (ref thread)
@@ -236,16 +235,12 @@
     (deliver p top)
     p))))
 
-(defn queue-pop-blocking [process]
- (while (queue-empty? process)
-  (Thread/sleep gen.internals/*sleep-interval*))
- (queue-pop process))
-
 (defn queue-size [process]
  (count @(:message-queue process)))
 
 (defn queue-flush [process]
  (dosync (alter (:message-queue process) #(remove (fn [& args] true) %1)))
+ (dosync (alter (:receive-promise-queue process) #(remove (fn [& args] true) %1)))
  nil)
 
 (defn self [& {:keys [storage]
@@ -303,8 +298,12 @@ If FALSE-BODY is not given, variable will hold promise, that
               "-linked")))
            "dead")))
         (queue-string [process]
-         (if (not (queue-empty? process))
-          (str ", messages: " (queue-size process))))
+         (str
+          (if (not (queue-empty? process))
+           (str ", messages: " (queue-size process)))
+          (let [rpq (count @(:receive-promise-queue process))]
+           (if (< 0 rpq)
+            (str ", message-waiting: " rpq)))))
         (result-string [process]
          (let [response (result-of process)]
           (if (not (= [:fail :still-running] response))

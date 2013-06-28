@@ -18,15 +18,17 @@
 
 (defn rule-create [& {:keys [important? restarts-everyone?
                              max-restarts in-milliseconds
-                             args]
+                             args no-initial-flush]
                       :or {important? false
                            restarts-everyone? false
-                           max-restarts 0}}]
+                           max-restarts 0
+                           no-initial-flush false}}]
  {:important? important?
   :restarts-everyone? restarts-everyone?
   :max-restarts max-restarts
   :in-milliseconds in-milliseconds
-  :args args})
+  :args args
+  :no-initial-flush false})
 
 (defn processes [supervisor]
  (:processes (second (gen.process/state-of supervisor))))
@@ -167,7 +169,13 @@
                  "milliseconds" "-|")
                 (println "|- process restarts infinitely -|")))))
             (if (not doom)
-             @(gen.process/restart-link process :supervisor-restart (:args rule)))
+             @(gen.process/restart-link
+               (if (:no-initial-flush rule)
+                process
+                (do
+                 (gen.process/queue-flush process)
+                 process))
+               (:args rule)))
             (if doom
              (recur
               (disj processes process)
@@ -192,7 +200,13 @@
             (println "== In supervisor" self "==")
             (println "|=" "ADDED" process "=|")))
           (do
-           @(gen.process/start-link process (:args rule))
+           @(gen.process/start-link
+             (if (:no-initial-flush rule)
+              process
+              (do
+               (gen.process/queue-flush process)
+               process))
+             (:args rule))
            (if *print-start-reports*
             (do
              (println "== In supervisor" self "==")
@@ -239,7 +253,14 @@ supervisor is terminated. Should be used on the main supervisor."
      (if *print-start-reports*
       (println "==" "STARTED supervisor" process "=="))
      (doall (map (bound-fn [process]
-                  @(gen.process/start-link process (:args (get rules process)))
+                  (let [rule (get rules process)]
+                   @(gen.process/start-link
+                     (if (:no-initial-flush rule)
+                      process
+                      (do
+                       (gen.process/queue-flush process)
+                       process))
+                     (:args rule)))
                   (if *print-start-reports*
                    (println "|=" "STARTED" process "=|")))
              processes))

@@ -36,7 +36,7 @@
                      (= command :self-term) (terminate :self-term state process)
                      (= command :run) (recur (body state process))))
                     (catch Object o
-                     (terminate o state# process)
+                     (terminate o state process)
                      (throw+ o)))))
        state-getter-fn (bound-fn [] (state-getter @state#))
        self-process (gen.process/create
