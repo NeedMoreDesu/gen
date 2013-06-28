@@ -10,7 +10,8 @@
  (:import java.util.concurrent.TimeoutException)
  (:require [gen linker-storage internals])
  (:require [clojure stacktrace [string :as str]])
- (:use [gen.internals :only [with-timeout]]))
+ (:use [gen.internals :only [with-timeout]])
+ (:use [slingshot.slingshot]))
 
 (def ^:dynamic *stacktraces* true)
 (def ^:dynamic *stacktrace-max-length* nil)
@@ -108,9 +109,9 @@
              thread (Thread.
                      (bound-fn []
                       (deliver return-promise
-                       (try
+                       (try+
                         (starter)
-                        (catch Exception e
+                        (catch Object e
                          (if *stacktraces*
                           (do
                            (println "=== In process" process "===")
@@ -176,7 +177,7 @@
 
 (defn stop [process reason]
  (future
-  (try
+  (try+
    (if (not (alive? process))
     [:fail :not-alive]
     (let [st (:stop-timeout process)
@@ -197,7 +198,7 @@
     (if (kill process)
      [:killed :timeout]
      [:fail :!kill-failure]))
-   (catch Exception e
+   (catch Object e
     (if (not (alive? process))
      [:terminated :exception]
      (if (kill process)
